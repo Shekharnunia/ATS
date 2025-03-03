@@ -55,7 +55,7 @@ This project implements a Candidate Tracking System (ATS) using Django REST Fram
 * **Age Calculation:**
     * Age is automatically calculated from the candidate's date of birth.
 * **Database Indexing:**
-    * A GinIndex is used on the candidate's name field for efficient text search.
+    * A GinIndex is used on the candidate's name field for efficient relevancy ordering.
 * **DRF Utilization:**
     * Extensive use of DRF's generics, serializers, and filtering.
 
