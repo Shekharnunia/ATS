@@ -9,5 +9,5 @@ urlpatterns = [
         views.CandidateRetrieveUpdateDestroyView.as_view(),
         name="candidate-retrieve-update-destroy",
     ),
-    path("search/", views.CandidateSearchView.as_view(), name="candidate-search"),
+    path("search/", views.CandidateSearchAPIView.as_view(), name="candidate-search"),
 ]

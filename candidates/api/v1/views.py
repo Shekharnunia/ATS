@@ -1,6 +1,5 @@
-from django.contrib.postgres.search import TrigramSimilarity
-from django.db import models
-from rest_framework import filters, generics
+from django.db.models import Case, IntegerField, Value, When
+from rest_framework import generics, status
 from rest_framework.response import Response
 
 from candidates.models import Candidate
@@ -8,13 +7,6 @@ from candidates.serializers import CandidateSerializer
 
 
 class CandidateListCreateView(generics.ListCreateAPIView):
-    """
-    get:
-    Return a list of all the existing candidates.
-    post:
-    Create a new candidate.
-    """
-
     serializer_class = CandidateSerializer
 
     def get_queryset(self):
@@ -23,53 +15,60 @@ class CandidateListCreateView(generics.ListCreateAPIView):
 
 
 class CandidateRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    get:
-    Return the candidate identified by the ID.
-    put:
-    Update the candidate identified by the ID.
-    patch:
-    Partially update the candidate identified by the ID.
-    delete:
-    Delete the candidate identified by the ID.
-    """
-
     queryset = Candidate.objects.all()
     serializer_class = CandidateSerializer
 
 
-class CandidateSearchView(generics.GenericAPIView):
-    """
-    get:
-    Search for candidates based on a query string.
-    """
-
-    serializer_class = CandidateSerializer
+class CandidateSearchAPIView(generics.GenericAPIView):
     queryset = Candidate.objects.all()
 
     def get(self, request):
-        query = request.query_params.get("q", "").strip()
+        query = request.GET.get("q", "").strip()
         if not query:
-            return Response({"error": "Query parameter 'q' is required"}, status=400)
+            return Response(
+                {"error": "Query parameter 'q' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        query_words = query.split()
+        search_words = query.split()
 
-        # Generate OR conditions for each word in the query
-        filters = models.Q()
-        for word in query_words:
-            filters |= models.Q(name__icontains=word)
+        queryset = self.get_queryset()
 
-        # Annotate with relevance score based on trigram similarity
-        candidates = (
-            Candidate.objects.filter(filters)
-            .annotate(relevance=TrigramSimilarity("name", query))
-            .order_by("-relevance")
+        # Annotate the queryset with a relevance based on the number of matching terms
+        for i, term in enumerate(search_words, start=1):
+            queryset = queryset.annotate(
+                **{
+                    f"match_{i}": Case(
+                        When(name__icontains=term, then=Value(1)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                }
+            )
+
+        # Sum up the matches to get the final relevance
+        queryset = queryset.annotate(
+            relevance=sum(
+                Case(
+                    When(**{f"match_{i}": 1}, then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+                for i in range(1, len(search_words) + 1)
+            )
         )
-        page = self.paginate_queryset(candidates)
+
+        # Filter out candidates with a relevance greater than 0 (optional)
+        queryset = queryset.filter(relevance__gt=0)
+
+        # Order by relevance in descending order (optional)
+        queryset = queryset.order_by("-relevance")
+
+        page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            serializer = CandidateSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = self.serializer_class(candidates, many=True)
-
+        # Serialize the queryset
+        serializer = CandidateSerializer(queryset, many=True)
         return Response(serializer.data)
