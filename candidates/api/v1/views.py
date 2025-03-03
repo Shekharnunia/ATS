@@ -3,8 +3,8 @@ from django.db import models
 from rest_framework import filters, generics
 from rest_framework.response import Response
 
-from candidates.api.v1.serializers import CandidateSerializer
 from candidates.models import Candidate
+from candidates.serializers import CandidateSerializer
 
 
 class CandidateListCreateView(generics.ListCreateAPIView):

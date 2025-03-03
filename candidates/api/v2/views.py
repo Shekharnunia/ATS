@@ -1,7 +1,8 @@
 from rest_framework import filters, generics
 from rest_framework.response import Response
 
-from candidates.api.v1.serializers import CandidateSerializer
+from candidates.models import Candidate
+from candidates.serializers import CandidateSerializer
 
 from .filters import CandidateFilter
 from .services import CandidateService
@@ -35,9 +36,12 @@ class CandidateAPIView(generics.GenericAPIView):
         return CandidateService().get_candidates()
 
     def get(self, request, pk):
-        candidate = self.get_queryset().get(pk=pk)
-        serializer = self.serializer_class(candidate)
-        return Response(serializer.data)
+        try:
+            candidate = self.get_queryset().get(pk=pk)
+            serializer = self.serializer_class(candidate)
+            return Response(serializer.data)
+        except Candidate.DoesNotExist:
+            return Response({"error": "Candidate not found"}, status=404)
 
     def put(self, request, pk):
         candidate = self.get_queryset().get(pk=pk)
