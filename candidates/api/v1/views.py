@@ -9,7 +9,6 @@ from candidates.serializers import CandidateSerializer
 
 class CandidateListCreateView(generics.ListCreateAPIView):
     serializer_class = CandidateSerializer
-    filter_backends = [filters.SearchFilter]
 
     def get_queryset(self):
         queryset = Candidate.objects.all().order_by("-id")

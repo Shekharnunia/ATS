@@ -10,7 +10,6 @@ from .services import CandidateService
 
 class CandidateListCreateView(generics.GenericAPIView):
     serializer_class = CandidateSerializer
-    filter_backends = [filters.SearchFilter]
 
     def get_queryset(self):
         queryset = CandidateService().get_candidates()
@@ -18,6 +17,10 @@ class CandidateListCreateView(generics.GenericAPIView):
 
     def get(self, request):
         queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.serializer_class(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data)
 
