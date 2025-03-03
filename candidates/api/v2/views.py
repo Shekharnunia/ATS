@@ -65,7 +65,6 @@ class CandidateAPIView(generics.GenericAPIView):
 class CandidateSearchView(generics.GenericAPIView):
     serializer_class = CandidateSerializer
     filterset_class = CandidateFilter
-    filter_backends = [DjangoFilterBackend]
 
     def get_queryset(self):
         return CandidateService().get_candidates()
