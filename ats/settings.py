@@ -29,6 +29,17 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 ]
 
+LOCAL_APPS = [
+    "candidates",
+]
+
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "django_extensions",
+]
+
+INSTALLED_APPS += LOCAL_APPS + THIRD_PARTY_APPS
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
