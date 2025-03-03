@@ -1,11 +1,10 @@
-from django.contrib.postgres.search import TrigramSimilarity
-from django.db import models
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics
 from rest_framework.response import Response
 
 from candidates.api.v1.serializers import CandidateSerializer
-from candidates.models import Candidate
 
+from .filters import CandidateFilter
 from .services import CandidateService
 
 
@@ -65,26 +64,23 @@ class CandidateAPIView(generics.GenericAPIView):
 
 class CandidateSearchView(generics.GenericAPIView):
     serializer_class = CandidateSerializer
-    queryset = Candidate.objects.all()
+    filterset_class = CandidateFilter
+    filter_backends = [DjangoFilterBackend]
+
+    def get_queryset(self):
+        return CandidateService().get_candidates()
 
     def get(self, request):
         query = request.query_params.get("q", "").strip()
         if not query:
             return Response({"error": "Query parameter 'q' is required"}, status=400)
 
-        query_words = query.split()
+        candidates = self.filter_queryset(self.get_queryset())
 
-        # Generate OR conditions for each word in the query
-        filters = models.Q()
-        for word in query_words:
-            filters |= models.Q(name__icontains=word)
+        page = self.paginate_queryset(candidates)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
-        # Annotate with relevance score based on trigram similarity
-        candidates = (
-            Candidate.objects.filter(filters)
-            .annotate(relevance=TrigramSimilarity("name", query))
-            .order_by("-relevance")
-        )
-
-        serializer = CandidateSerializer(candidates, many=True)
+        serializer = self.serializer_class(candidates, many=True)
         return Response(serializer.data)
