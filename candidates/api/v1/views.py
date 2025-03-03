@@ -43,6 +43,11 @@ class CandidateSearchView(generics.GenericAPIView):
             .annotate(relevance=TrigramSimilarity("name", query))
             .order_by("-relevance")
         )
+        page = self.paginate_queryset(candidates)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
-        serializer = CandidateSerializer(candidates, many=True)
+        serializer = self.serializer_class(candidates, many=True)
+
         return Response(serializer.data)
