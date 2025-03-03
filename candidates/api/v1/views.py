@@ -21,6 +21,7 @@ class CandidateRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class CandidateSearchAPIView(generics.GenericAPIView):
     queryset = Candidate.objects.all()
+    serializer_class = CandidateSerializer
 
     def get(self, request):
         query = request.GET.get("q", "").strip()
@@ -32,43 +33,32 @@ class CandidateSearchAPIView(generics.GenericAPIView):
 
         search_words = query.split()
 
-        queryset = self.get_queryset()
+        # Create a list of conditions for matching terms
+        conditions = [
+            When(name__icontains=term, then=Value(1)) for term in search_words
+        ]
 
-        # Annotate the queryset with a relevance based on the number of matching terms
-        for i, term in enumerate(search_words, start=1):
-            queryset = queryset.annotate(
-                **{
-                    f"match_{i}": Case(
-                        When(name__icontains=term, then=Value(1)),
-                        default=Value(0),
-                        output_field=IntegerField(),
-                    )
-                }
-            )
-
-        # Sum up the matches to get the final relevance
-        queryset = queryset.annotate(
+        # Annotate the queryset with the sum of matches
+        queryset = self.get_queryset().annotate(
             relevance=sum(
                 Case(
-                    When(**{f"match_{i}": 1}, then=Value(1)),
+                    condition,
                     default=Value(0),
                     output_field=IntegerField(),
                 )
-                for i in range(1, len(search_words) + 1)
+                for condition in conditions
             )
         )
+        print(queryset)
 
-        # Filter out candidates with a relevance greater than 0 (optional)
-        queryset = queryset.filter(relevance__gt=0)
+        # Filter and order by relevance
+        queryset = queryset.filter(relevance__gt=0).order_by("-relevance")
 
-        # Order by relevance in descending order (optional)
-        queryset = queryset.order_by("-relevance")
-
+        # Paginate and serialize the queryset
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = CandidateSerializer(page, many=True)
+            serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        # Serialize the queryset
-        serializer = CandidateSerializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
