@@ -1,6 +1,7 @@
+from django.contrib.postgres.search import TrigramSimilarity
 from django.db import models
-from django.db.models import Q
 from rest_framework import filters, generics
+from rest_framework.response import Response
 
 from candidates.api.v1.serializers import CandidateSerializer
 from candidates.models import Candidate
@@ -20,33 +21,28 @@ class CandidateRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CandidateSerializer
 
 
-class CandidateSearchView(generics.ListAPIView):
+class CandidateSearchView(generics.GenericAPIView):
     serializer_class = CandidateSerializer
+    queryset = Candidate.objects.all()
 
-    def get_queryset(self):
-        search_query = self.request.query_params.get("q", "")
-        search_terms = search_query.split()
+    def get(self, request):
+        query = request.query_params.get("q", "").strip()
+        if not query:
+            return Response({"error": "Query parameter 'q' is required"}, status=400)
 
-        # Build a Q object for each term in the search query
-        q_objects = Q()
-        for term in search_terms:
-            q_objects |= Q(name__icontains=term)
+        query_words = query.split()
 
-        # Annotate candidates with the number of matching terms
-        queryset = (
-            Candidate.objects.filter(q_objects)
-            .annotate(
-                relevancy=models.Count(
-                    *[
-                        models.Case(
-                            models.When(name__icontains=term, then=1),
-                            output_field=models.IntegerField(),
-                        )
-                        for term in search_terms
-                    ]
-                )
-            )
-            .order_by("-relevancy")
+        # Generate OR conditions for each word in the query
+        filters = models.Q()
+        for word in query_words:
+            filters |= models.Q(name__icontains=word)
+
+        # Annotate with relevance score based on trigram similarity
+        candidates = (
+            Candidate.objects.filter(filters)
+            .annotate(relevance=TrigramSimilarity("name", query))
+            .order_by("-relevance")
         )
 
-        return queryset
+        serializer = CandidateSerializer(candidates, many=True)
+        return Response(serializer.data)

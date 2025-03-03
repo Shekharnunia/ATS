@@ -1,3 +1,4 @@
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 
@@ -17,3 +18,6 @@ class Candidate(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        indexes = [GinIndex(fields=["name"])]
