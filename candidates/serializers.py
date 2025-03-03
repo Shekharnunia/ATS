@@ -22,6 +22,12 @@ class CandidateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Date of birth cannot be in the future")
         return value
 
+    def validate_phone_number(self, value: str) -> str:
+        # validate phone_number
+        if not value.isdigit():
+            raise serializers.ValidationError("Phone number must contain only digits")
+        return value
+
     class Meta:
         model = Candidate
         fields = [

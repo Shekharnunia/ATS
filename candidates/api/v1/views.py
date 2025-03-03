@@ -8,6 +8,13 @@ from candidates.serializers import CandidateSerializer
 
 
 class CandidateListCreateView(generics.ListCreateAPIView):
+    """
+    get:
+    Return a list of all the existing candidates.
+    post:
+    Create a new candidate.
+    """
+
     serializer_class = CandidateSerializer
 
     def get_queryset(self):
@@ -16,11 +23,27 @@ class CandidateListCreateView(generics.ListCreateAPIView):
 
 
 class CandidateRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    get:
+    Return the candidate identified by the ID.
+    put:
+    Update the candidate identified by the ID.
+    patch:
+    Partially update the candidate identified by the ID.
+    delete:
+    Delete the candidate identified by the ID.
+    """
+
     queryset = Candidate.objects.all()
     serializer_class = CandidateSerializer
 
 
 class CandidateSearchView(generics.GenericAPIView):
+    """
+    get:
+    Search for candidates based on a query string.
+    """
+
     serializer_class = CandidateSerializer
     queryset = Candidate.objects.all()
 

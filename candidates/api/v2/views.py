@@ -9,6 +9,13 @@ from .services import CandidateService
 
 
 class CandidateListCreateView(generics.GenericAPIView):
+    """
+    get:
+    Return a list of all the existing candidates.
+    post:
+    Create a new candidate.
+    """
+
     serializer_class = CandidateSerializer
 
     def get_queryset(self):
@@ -33,6 +40,17 @@ class CandidateListCreateView(generics.GenericAPIView):
 
 
 class CandidateAPIView(generics.GenericAPIView):
+    """
+    get:
+    Return the candidate identified by the ID.
+    put:
+    Update the candidate identified by the ID.
+    patch:
+    Partially update the candidate identified by the ID.
+    delete:
+    Delete the candidate identified by the ID.
+    """
+
     serializer_class = CandidateSerializer
 
     def get_queryset(self):
@@ -69,6 +87,11 @@ class CandidateAPIView(generics.GenericAPIView):
 
 
 class CandidateSearchView(generics.GenericAPIView):
+    """
+    get:
+    Search for candidates based on a query string.
+    """
+
     serializer_class = CandidateSerializer
     filterset_class = CandidateFilter
 
